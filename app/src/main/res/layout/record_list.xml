@@ -6,8 +6,6 @@
     android:name="fr.maxime_agusti.weightkeeper.RecordListFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_marginLeft="16dp"
-    android:layout_marginRight="16dp"
     app:layoutManager="LinearLayoutManager"
     tools:context="fr.maxime_agusti.weightkeeper.activity.RecordListActivity"
     tools:listitem="@layout/record_list_content" />

@@ -9,6 +9,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,12 +17,17 @@ import android.widget.TextView;
 
 
 import fr.maxime_agusti.weightkeeper.R;
+import fr.maxime_agusti.weightkeeper.data.RecordData;
+import fr.maxime_agusti.weightkeeper.database.MySQLHelper;
+import fr.maxime_agusti.weightkeeper.dialog.AddRecordDialogFragment;
+import fr.maxime_agusti.weightkeeper.entity.Record;
 import fr.maxime_agusti.weightkeeper.fragment.RecordDetailFragment;
 import fr.maxime_agusti.weightkeeper.dummy.DummyContent;
 
+import java.util.Collections;
 import java.util.List;
 
-public class RecordListActivity extends AppCompatActivity {
+public class RecordListActivity extends AppCompatActivity implements AddRecordDialogFragment.AddRecordDialogListener {
 
     private boolean mTwoPane;
 
@@ -38,8 +44,9 @@ public class RecordListActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+
+                AddRecordDialogFragment dialog = new AddRecordDialogFragment();
+                dialog.show(getSupportFragmentManager(), "show");
             }
         });
 
@@ -53,15 +60,26 @@ public class RecordListActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter(DummyContent.ITEMS));
+        recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter((new RecordData(new MySQLHelper(this))).getAllRecord()));
+    }
+
+    @Override
+    public void onAddRecord(Record record) {
+
+        (new RecordData(new MySQLHelper(this))).createRecord(record);
+
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.record_list);
+        assert recyclerView != null;
+        SimpleItemRecyclerViewAdapter adapter = (SimpleItemRecyclerViewAdapter) recyclerView.getAdapter();
+        adapter.add(record);
     }
 
     public class SimpleItemRecyclerViewAdapter
             extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
 
-        private final List<DummyContent.DummyItem> mValues;
+        private final List<Record> mValues;
 
-        public SimpleItemRecyclerViewAdapter(List<DummyContent.DummyItem> items) {
+        public SimpleItemRecyclerViewAdapter(List<Record> items) {
             mValues = items;
         }
 
@@ -72,18 +90,23 @@ public class RecordListActivity extends AppCompatActivity {
             return new ViewHolder(view);
         }
 
+        public void add(Record ...records) {
+            Collections.addAll(mValues, records);
+            notifyDataSetChanged();
+        }
+
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
             holder.mItem = mValues.get(position);
-            holder.mIdView.setText(mValues.get(position).id);
-            holder.mContentView.setText(mValues.get(position).content);
+            holder.mWeightView.setText(String.valueOf(mValues.get(position).getWeight()) + " kg");
+            holder.mInstantView.setText(mValues.get(position).getInstant());
 
             holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mTwoPane) {
                         Bundle arguments = new Bundle();
-                        arguments.putString(RecordDetailFragment.ARG_ITEM_ID, holder.mItem.id);
+                        arguments.putLong(RecordDetailFragment.ARG_ITEM_ID, holder.mItem.getId());
                         RecordDetailFragment fragment = new RecordDetailFragment();
                         fragment.setArguments(arguments);
                         getSupportFragmentManager().beginTransaction()
@@ -92,7 +115,7 @@ public class RecordListActivity extends AppCompatActivity {
                     } else {
                         Context context = v.getContext();
                         Intent intent = new Intent(context, RecordDetailActivity.class);
-                        intent.putExtra(RecordDetailFragment.ARG_ITEM_ID, holder.mItem.id);
+                        intent.putExtra(RecordDetailFragment.ARG_ITEM_ID, holder.mItem.getId());
 
                         context.startActivity(intent);
                     }
@@ -107,20 +130,20 @@ public class RecordListActivity extends AppCompatActivity {
 
         public class ViewHolder extends RecyclerView.ViewHolder {
             public final View mView;
-            public final TextView mIdView;
-            public final TextView mContentView;
-            public DummyContent.DummyItem mItem;
+            public final TextView mWeightView;
+            public final TextView mInstantView;
+            public Record mItem;
 
             public ViewHolder(View view) {
                 super(view);
                 mView = view;
-                mIdView = (TextView) view.findViewById(R.id.id);
-                mContentView = (TextView) view.findViewById(R.id.content);
+                mWeightView = (TextView) view.findViewById(R.id.weight);
+                mInstantView = (TextView) view.findViewById(R.id.instant);
             }
 
             @Override
             public String toString() {
-                return super.toString() + " '" + mContentView.getText() + "'";
+                return super.toString() + " '" + mWeightView.getText() + "'";
             }
         }
     }
